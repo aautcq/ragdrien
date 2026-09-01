@@ -1,0 +1,5 @@
+# Fail closed, not open, when RAG retrieval errors
+
+When answering a turn, the chat route now embeds the visitor's message and searches the vector store before calling the chat model. If that embedding call or the store build throws (e.g. the embedding model isn't pulled, or Ollama is unreachable), we let the error surface to the visitor exactly like an existing chat-model failure, rather than catching it and silently falling back to an ungrounded reply.
+
+We chose this over a silent fallback because a silently-degraded turn is indistinguishable, from the outside, from RAG correctly finding nothing relevant — it would hide real operational problems (a down embedding model, a misconfigured `OLLAMA_EMBEDDING_MODEL`) behind answers that look like normal ungrounded chat. The trade-off is that a retrieval outage takes down chat entirely instead of degrading gracefully; we accept that because visibility into RAG failures matters more than uptime for what is currently a low-traffic personal chatbot, and it's a call a future ADR can reverse if that trade-off stops making sense.
