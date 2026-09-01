@@ -6,7 +6,7 @@ import type { UIMessage } from 'ai'
 import { resolveOllamaConfig } from '@/lib/ollama/config'
 import { createEmbeddings } from '@/lib/rag/embeddings'
 import { getRagStore } from '@/lib/rag/index'
-import { buildContextMessage, retrieveRelevantChunks } from '@/lib/rag/retrieval'
+import { buildContextMessage, buildRetrievalQuery, chunksToSources, retrieveRelevantChunks } from '@/lib/rag/retrieval'
 
 /**
  * Extracts the plain text of a message, ignoring any non-text parts.
@@ -56,7 +56,19 @@ export async function POST(request: Request) {
       // rather than silently falling back to an ungrounded reply — see
       // docs/adr/0002-fail-closed-on-retrieval-errors.md.
       const store = await getRagStore()
-      const chunks = await retrieveRelevantChunks(text, { store, embeddings: createEmbeddings() })
+
+      // Derive the Retrieval query from the full conversation, translated
+      // to English: this resolves referential follow-ups (e.g. "and the
+      // second one?") and lets a non-English visitor message still match
+      // English Documents. Runs on every turn, including the first, since
+      // translation is needed even for a lone non-English message — only
+      // skipped when the store is empty (nothing to search) — see
+      // docs/adr/0004-rewrite-retrieval-query-from-full-conversation.md.
+      const retrievalQuery = store.size > 0
+        ? await buildRetrievalQuery(conversation, model)
+        : text
+
+      const chunks = await retrieveRelevantChunks(retrievalQuery, { store, embeddings: createEmbeddings() })
       const contextMessage = buildContextMessage(chunks)
 
       const prompt: BaseMessage[] = contextMessage
@@ -75,6 +87,12 @@ export async function POST(request: Request) {
       }
 
       writer.write({ type: 'text-end', id })
+
+      // Sources: streamed only once the reply has fully finished, and only
+      // for grounded turns — see CONTEXT.md's "Source" term.
+      for (const source of chunksToSources(chunks)) {
+        writer.write({ type: 'source-document', ...source })
+      }
     },
     // Surface a clear error to the client (e.g. Ollama unreachable, model not
     // pulled, or a RAG retrieval failure) rather than hanging or failing silently.

@@ -1,5 +1,6 @@
 "use client";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   ButtonGroup,
@@ -340,6 +341,41 @@ export const MessageResponse = memo(
 );
 
 MessageResponse.displayName = "MessageResponse";
+
+export type MessageSourcesProps = ComponentProps<"div"> & {
+  sources: { sourceId: string; title: string }[];
+};
+
+/**
+ * Footer row listing the Documents that grounded a reply — see CONTEXT.md's
+ * "Source" term. Renders nothing when there are no sources (ungrounded turn).
+ */
+export const MessageSources = ({
+  sources,
+  className,
+  ...props
+}: MessageSourcesProps) => {
+  if (sources.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-1.5 text-muted-foreground text-xs",
+        className
+      )}
+      {...props}
+    >
+      <span>Sources:</span>
+      {sources.map((source) => (
+        <Badge key={source.sourceId} variant="outline">
+          {source.title}
+        </Badge>
+      ))}
+    </div>
+  );
+};
 
 export type MessageToolbarProps = ComponentProps<"div">;
 

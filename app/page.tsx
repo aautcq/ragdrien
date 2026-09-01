@@ -8,7 +8,7 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import { Message, MessageContent, MessageResponse, MessageSources } from "@/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputBody,
@@ -57,6 +57,14 @@ export default function Home() {
                     ) : null
                   )}
                 </MessageContent>
+                <MessageSources
+                  sources={message.parts
+                    .filter((part) => part.type === "source-document")
+                    .map((part) => ({
+                      sourceId: part.sourceId,
+                      title: part.title,
+                    }))}
+                />
               </Message>
             ))
           )}
@@ -74,6 +82,7 @@ export default function Home() {
             value={input}
             onChange={(event) => setInput(event.target.value)}
             placeholder="Ask me anything..."
+            autoFocus
           />
         </PromptInputBody>
         <PromptInputFooter>
