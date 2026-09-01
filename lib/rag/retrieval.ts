@@ -70,6 +70,8 @@ export interface SourceDocument {
   sourceId: string
   mediaType: string
   title: string
+  /** The Document's origin URL, when known — see RagDocument.sourceUrl. */
+  url?: string
 }
 
 /**
@@ -87,7 +89,8 @@ export function chunksToSources(chunks: RagChunk[]): SourceDocument[] {
     sources.push({
       sourceId: chunk.documentId,
       mediaType: chunk.documentId.endsWith('.pdf') ? 'application/pdf' : 'text/markdown',
-      title: chunk.documentId
+      title: chunk.documentId,
+      ...(chunk.sourceUrl ? { url: chunk.sourceUrl } : {})
     })
   }
 

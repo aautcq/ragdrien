@@ -89,9 +89,14 @@ export async function POST(request: Request) {
       writer.write({ type: 'text-end', id })
 
       // Sources: streamed only once the reply has fully finished, and only
-      // for grounded turns — see CONTEXT.md's "Source" term.
-      for (const source of chunksToSources(chunks)) {
-        writer.write({ type: 'source-document', ...source })
+      // for grounded turns — see CONTEXT.md's "Source" term. A Source with
+      // a known origin URL (see RagDocument.sourceUrl) streams as the AI
+      // SDK's source-url part so the client can link to it; otherwise it
+      // streams as source-document, identified only by its media type.
+      for (const { sourceId, mediaType, title, url } of chunksToSources(chunks)) {
+        writer.write(url
+          ? { type: 'source-url', sourceId, url, title }
+          : { type: 'source-document', sourceId, mediaType, title })
       }
     },
     // Surface a clear error to the client (e.g. Ollama unreachable, model not

@@ -39,6 +39,44 @@ describe('loadDocuments', () => {
     ])
   })
 
+  it('parses a leading frontmatter block off a markdown document, exposing its source url and stripping it from content', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
+    await writeFile(
+      join(dir, 'profile.md'),
+      '---\nsource: https://example.com/profile\nfetchedAt: 2026-01-01\n---\n# Profile\n\nBody text.'
+    )
+
+    expect(await loadDocuments(dir)).toEqual([
+      { id: 'profile.md', content: '# Profile\n\nBody text.', sourceUrl: 'https://example.com/profile' }
+    ])
+  })
+
+  it('omits sourceUrl for a markdown document with no frontmatter', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
+    await writeFile(join(dir, 'plain.md'), '# Plain\n\nNo frontmatter here.')
+
+    expect(await loadDocuments(dir)).toEqual([
+      { id: 'plain.md', content: '# Plain\n\nNo frontmatter here.' }
+    ])
+  })
+
+  it('omits sourceUrl when frontmatter is present but has no source key', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
+    await writeFile(join(dir, 'note.md'), '---\nfetchedAt: 2026-01-01\n---\n# Note')
+
+    expect(await loadDocuments(dir)).toEqual([
+      { id: 'note.md', content: '# Note' }
+    ])
+  })
+
+  it('leaves content untouched when it merely opens with a horizontal rule, not real frontmatter', async () => {
+    dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
+    const content = '---\n\nSome intro text.\n\n---\n\nMore content after a second rule.\n'
+    await writeFile(join(dir, 'notes.md'), content)
+
+    expect(await loadDocuments(dir)).toEqual([{ id: 'notes.md', content }])
+  })
+
   it('rethrows errors other than "directory does not exist" instead of treating them as no documents', async () => {
     dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
     const notADirectory = join(dir, 'a-file.md')

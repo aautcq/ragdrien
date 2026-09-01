@@ -7,6 +7,8 @@ export interface RagChunk {
   /** Position of this chunk within its source document, starting at 0. */
   index: number
   content: string
+  /** Denormalized from the source RagDocument's sourceUrl, when it has one. */
+  sourceUrl?: string
 }
 
 const CHUNK_SIZE = 1000
@@ -27,5 +29,7 @@ export async function chunkDocument(document: RagDocument): Promise<RagChunk[]> 
     : new MarkdownTextSplitter({ chunkSize: CHUNK_SIZE, chunkOverlap: CHUNK_OVERLAP })
   const parts = await splitter.splitText(document.content)
 
-  return parts.map((content, index) => ({ documentId: document.id, index, content }))
+  return parts.map((content, index) => document.sourceUrl
+    ? { documentId: document.id, index, content, sourceUrl: document.sourceUrl }
+    : { documentId: document.id, index, content })
 }

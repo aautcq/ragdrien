@@ -24,6 +24,20 @@ describe('chunkDocument', () => {
     })
   })
 
+  it('denormalizes the document\'s sourceUrl onto every chunk', async () => {
+    const chunks = await chunkDocument({ id: 'profile.md', content: '# Profile\n\nBody.', sourceUrl: 'https://example.com/profile' })
+
+    expect(chunks).toEqual([
+      { documentId: 'profile.md', index: 0, content: '# Profile\n\nBody.', sourceUrl: 'https://example.com/profile' }
+    ])
+  })
+
+  it('omits sourceUrl on chunks from a document with none', async () => {
+    const chunks = await chunkDocument({ id: 'short.md', content: '# Title\n\nA short paragraph.' })
+
+    expect(chunks[0]?.sourceUrl).toBeUndefined()
+  })
+
   it('keeps a short pdf document as a single chunk', async () => {
     const chunks = await chunkDocument({ id: 'short.pdf', content: 'A short paragraph extracted from a PDF.' })
 

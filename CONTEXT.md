@@ -23,7 +23,7 @@ The minimum similarity a Chunk's Embedding must reach against the query Embeddin
 The local Ollama-hosted LLM that generates assistant replies, selectable via configuration rather than hardcoded.
 
 **Document**:
-One source file (Markdown or PDF) under `lib/rag/documents/`, in its raw authored form before any processing. Always written in English, regardless of the visitor's language — see Retrieval query.
+One source file (Markdown or PDF) under `lib/rag/documents/`. Either hand-authored directly, or fetched from a web page and cleaned into Markdown by `scripts/fetch-document.ts` — either way, always written in English, regardless of the visitor's language — see Retrieval query. A fetched Document carries the page it came from as its source url, parsed from a leading frontmatter block and never exposed to the Model as part of its content.
 
 **Chunk**:
 A contiguous slice of a Document's extracted text, sized to fit the embedding model's input limit; the unit that gets embedded and stored. For Markdown Documents, boundaries follow section structure (headings/paragraphs); for PDF Documents, whose extracted text has no such structure, boundaries are chosen by size alone.
@@ -35,5 +35,5 @@ The numeric vector representation of a Chunk, produced by the embedding model.
 The in-memory index of (Chunk, Embedding) pairs, built lazily on first use and held for the server process's lifetime. Not persisted to disk.
 
 **Source**:
-A Document that contributed at least one Chunk to a turn's grounding context, shown to the visitor as a "Sources:" list beneath the reply once it has finished streaming. Chunks from the same Document collapse into a single Source entry, ordered by that Document's best-scoring Chunk, highest first. Absent entirely from an ungrounded turn's reply.
+A Document that contributed at least one Chunk to a turn's grounding context, shown to the visitor as a "Sources:" list beneath the reply once it has finished streaming. Chunks from the same Document collapse into a single Source entry, ordered by that Document's best-scoring Chunk, highest first. Links out to the Document's source url when it has one (see Document). Absent entirely from an ungrounded turn's reply.
 _Avoid_: Citation, Reference

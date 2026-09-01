@@ -203,6 +203,25 @@ describe('POST /api/chat (RAG retrieval)', () => {
     expect(text).toContain('"mediaType":"text/markdown"')
   })
 
+  it('streams a source-url part instead, when the contributing document has a known sourceUrl', async () => {
+    const store = new RagStore()
+    store.add([{
+      chunk: { documentId: 'profile.md', index: 0, content: 'The owner lives in Belgium.', sourceUrl: 'https://example.com/profile' },
+      embedding: [1, 0]
+    }])
+    getRagStore.mockResolvedValue(store)
+    createEmbeddings.mockReturnValue(fakeEmbeddings([1, 0]))
+
+    const response = await postChat({ messages: [userMessage('1', 'Where does the owner live?')] })
+    const text = await response.text()
+
+    expect(text).toContain('"type":"source-url"')
+    expect(text).not.toContain('"type":"source-document"')
+    expect(text).toContain('"sourceId":"profile.md"')
+    expect(text).toContain('"url":"https://example.com/profile"')
+    expect(text).toContain('"title":"profile.md"')
+  })
+
   it('does not stream a source-document part for an ungrounded, plain reply', async () => {
     const store = new RagStore()
     store.add([{ chunk: { documentId: 'about.md', index: 0, content: 'unrelated content' }, embedding: [0, 1] }])

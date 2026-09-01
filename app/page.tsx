@@ -59,10 +59,17 @@ export default function Home() {
                 </MessageContent>
                 <MessageSources
                   sources={message.parts
-                    .filter((part) => part.type === "source-document")
+                    .filter(
+                      (part) =>
+                        part.type === "source-document" ||
+                        part.type === "source-url"
+                    )
                     .map((part) => ({
                       sourceId: part.sourceId,
-                      title: part.title,
+                      title: part.title ?? part.sourceId,
+                      ...(part.type === "source-url"
+                        ? { url: part.url }
+                        : {}),
                     }))}
                 />
               </Message>

@@ -343,12 +343,14 @@ export const MessageResponse = memo(
 MessageResponse.displayName = "MessageResponse";
 
 export type MessageSourcesProps = ComponentProps<"div"> & {
-  sources: { sourceId: string; title: string }[];
+  sources: { sourceId: string; title: string; url?: string }[];
 };
 
 /**
  * Footer row listing the Documents that grounded a reply — see CONTEXT.md's
  * "Source" term. Renders nothing when there are no sources (ungrounded turn).
+ * A source with a known origin url (see CONTEXT.md's Document term) links out
+ * to it in a new tab; others render as plain, non-interactive badges.
  */
 export const MessageSources = ({
   sources,
@@ -368,11 +370,22 @@ export const MessageSources = ({
       {...props}
     >
       <span>Sources:</span>
-      {sources.map((source) => (
-        <Badge key={source.sourceId} variant="outline">
-          {source.title}
-        </Badge>
-      ))}
+      {sources.map((source) =>
+        source.url ? (
+          <a
+            key={source.sourceId}
+            href={source.url}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Badge variant="outline">{source.title}</Badge>
+          </a>
+        ) : (
+          <Badge key={source.sourceId} variant="outline">
+            {source.title}
+          </Badge>
+        )
+      )}
     </div>
   );
 };

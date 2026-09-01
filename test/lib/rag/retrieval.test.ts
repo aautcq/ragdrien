@@ -125,6 +125,18 @@ describe('chunksToSources', () => {
 
     expect(sources).toEqual([{ sourceId: 'resume.pdf', mediaType: 'application/pdf', title: 'resume.pdf' }])
   })
+
+  it('includes the url when the contributing chunk has a sourceUrl', () => {
+    const sources = chunksToSources([{ documentId: 'profile.md', index: 0, content: 'body', sourceUrl: 'https://example.com/profile' }])
+
+    expect(sources).toEqual([{ sourceId: 'profile.md', mediaType: 'text/markdown', title: 'profile.md', url: 'https://example.com/profile' }])
+  })
+
+  it('omits url when the contributing chunk has none', () => {
+    const sources = chunksToSources([chunk('a.md', 0)])
+
+    expect(sources[0]?.url).toBeUndefined()
+  })
 })
 
 describe('buildContextMessage', () => {
