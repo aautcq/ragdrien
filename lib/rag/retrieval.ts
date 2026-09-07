@@ -4,6 +4,7 @@ import { HumanMessage } from '@langchain/core/messages'
 import type { BaseMessage } from '@langchain/core/messages'
 import type { RagChunk } from './chunker'
 import type { RagStore } from './store'
+import { getHostname } from '@/lib/utils'
 
 /** Default number of candidate chunks pulled from the store before filtering by relevance. */
 const DEFAULT_K = 4
@@ -122,7 +123,7 @@ export function chunksToSources(chunks: RagChunk[]): SourceDocument[] {
     sources.push({
       sourceId: chunk.documentId,
       mediaType: chunk.documentId.endsWith('.pdf') ? 'application/pdf' : 'text/markdown',
-      title: chunk.documentId,
+      title: chunk.sourceUrl ? getHostname(chunk.sourceUrl) : chunk.documentId,
       ...(chunk.sourceUrl ? { url: chunk.sourceUrl } : {})
     })
   }
