@@ -20,7 +20,7 @@ import {
 export default function Home() {
   const [input, setInput] = useState("");
 
-  const { messages, status, error, sendMessage } = useChat({
+  const { messages, status, error, sendMessage, stop } = useChat({
     onError(err) {
       console.error(err);
     },
@@ -37,13 +37,13 @@ export default function Home() {
   }
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] w-full max-w-3xl flex-col py-4">
+    <div className="mx-auto flex h-dvh w-full max-w-3xl flex-col py-4">
       <Conversation className="flex-1">
         <ConversationContent>
           {messages.length === 0 ? (
             <ConversationEmptyState
               title="No messages yet"
-              description="Ask me anything..."
+              description="Ask me anything about Adrien..."
             />
           ) : (
             messages.map((message) => (
@@ -93,7 +93,11 @@ export default function Home() {
           />
         </PromptInputBody>
         <PromptInputFooter>
-          <PromptInputSubmit status={status} disabled={!input.trim()} />
+          <PromptInputSubmit
+            status={status}
+            disabled={(status === 'ready' && !input.trim()) || ['error', 'submitted'].includes(status)}
+            onStop={stop}
+          />
         </PromptInputFooter>
       </PromptInput>
     </div>
