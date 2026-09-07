@@ -8,8 +8,37 @@ import type { RagStore } from './store'
 /** Default number of candidate chunks pulled from the store before filtering by relevance. */
 const DEFAULT_K = 4
 
-/** Minimum cosine similarity a chunk must reach to be considered relevant enough to inject. */
-export const RELEVANCE_THRESHOLD = 0.5
+/** Default minimum cosine similarity a chunk must reach to be considered relevant enough to inject. */
+const DEFAULT_RELEVANCE_THRESHOLD = 0.5
+
+/**
+ * Parses a numeric env var, falling back to defaultValue when unset, blank,
+ * or not a finite number. Blank is treated as absent rather than parsed —
+ * `Number('')` is `0`, a finite number that would otherwise silently win
+ * over the default (e.g. an empty `RAG_RETRIEVAL_K=` would mean "retrieve
+ * zero chunks" instead of falling back).
+ */
+function parseNumberEnv(value: string | undefined, defaultValue: number): number {
+  if (value === undefined || value.trim() === '') {
+    return defaultValue
+  }
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : defaultValue
+}
+
+/**
+ * Resolves the retrieval count (k) and relevance threshold from the
+ * environment, read at request time (not build time), mirroring
+ * resolveOllamaConfig — falls back to sensible defaults when a var is unset
+ * or fails to parse as a number, so a malformed override degrades gracefully
+ * instead of crashing the app.
+ */
+export function resolveRetrievalConfig(env: Partial<Record<string, string>> = process.env) {
+  return {
+    k: parseNumberEnv(env.RAG_RETRIEVAL_K, DEFAULT_K),
+    threshold: parseNumberEnv(env.RAG_RELEVANCE_THRESHOLD, DEFAULT_RELEVANCE_THRESHOLD)
+  }
+}
 
 /**
  * Appended to the conversation to have the Model rewrite the visitor's
@@ -53,16 +82,20 @@ export interface RetrieveRelevantChunksOptions {
  */
 export async function retrieveRelevantChunks(
   query: string,
-  { store, embeddings, k = DEFAULT_K, threshold = RELEVANCE_THRESHOLD }: RetrieveRelevantChunksOptions
+  { store, embeddings, k, threshold }: RetrieveRelevantChunksOptions
 ): Promise<RagChunk[]> {
   if (store.size === 0) {
     return []
   }
 
+  const resolved = resolveRetrievalConfig()
+  const effectiveK = k ?? resolved.k
+  const effectiveThreshold = threshold ?? resolved.threshold
+
   const queryEmbedding = await embeddings.embedQuery(query)
 
-  return store.similaritySearch(queryEmbedding, k)
-    .filter(match => match.score >= threshold)
+  return store.similaritySearch(queryEmbedding, effectiveK)
+    .filter(match => match.score >= effectiveThreshold)
     .map(match => match.chunk)
 }
 

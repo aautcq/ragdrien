@@ -17,7 +17,10 @@ Retrieval-Augmented Generation — answering a turn using content retrieved from
 The query text used to search the Vector store for a turn: a standalone, English rewrite of the whole Conversational turn's transcript, produced by the Model. Standalone so a message like "and the second one" resolves its reference to an earlier turn, and English because Documents are always English while a visitor may write in any language. Skipped only when the Vector store is empty (nothing to search), in which case the visitor's message is used as-is.
 
 **Relevance threshold**:
-The minimum similarity a Chunk's Embedding must reach against the query Embedding to be considered a match worth injecting into the prompt. Chunks below it are discarded rather than forced into context.
+The minimum similarity a Chunk's Embedding must reach against the query Embedding to be considered a match worth injecting into the prompt. Chunks below it are discarded rather than forced into context. Selectable via configuration rather than hardcoded.
+
+**Retrieval count**:
+The number of candidate Chunks pulled from the Vector store per query, before the Relevance threshold filters them down. Selectable via configuration rather than hardcoded.
 
 **Model**:
 The local Ollama-hosted LLM that generates assistant replies, selectable via configuration rather than hardcoded.

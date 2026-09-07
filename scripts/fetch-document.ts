@@ -146,6 +146,12 @@ export async function fetchDocument({ url, filename, force }: ParsedArgs, docume
 const isMain = process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1]
 
 async function main() {
+  // Run outside Next.js (via `tsx`), so .env isn't loaded automatically the
+  // way it is for `next dev`/`build`/`start` — load it explicitly here,
+  // scoped to script execution only (not test imports of this module).
+  const { loadEnvConfig } = await import('@next/env')
+  loadEnvConfig(process.cwd(), process.env.NODE_ENV !== 'production')
+
   const args = parseArgs(process.argv.slice(2))
   const path = await fetchDocument(args)
   console.log(`Wrote ${path}`)

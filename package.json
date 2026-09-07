@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@mozilla/readability": "^0.6.0",
+    "@next/env": "^16.3.4",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^20",

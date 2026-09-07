@@ -3,7 +3,7 @@ import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { AIMessage, HumanMessage } from '@langchain/core/messages'
 import { describe, expect, it } from 'vitest'
 import { RagStore } from '@/lib/rag/store'
-import { buildContextMessage, buildRetrievalQuery, chunksToSources, retrieveRelevantChunks } from '@/lib/rag/retrieval'
+import { buildContextMessage, buildRetrievalQuery, chunksToSources, resolveRetrievalConfig, retrieveRelevantChunks } from '@/lib/rag/retrieval'
 
 function chunk(documentId: string, index: number, content = `${documentId}#${index}`) {
   return { documentId, index, content }
@@ -62,6 +62,22 @@ describe('retrieveRelevantChunks', () => {
     })
 
     expect(chunks).toEqual([chunk('a.md', 0)])
+  })
+})
+
+describe('resolveRetrievalConfig', () => {
+  it('falls back to the default k and threshold when the env vars are unset', () => {
+    expect(resolveRetrievalConfig({})).toEqual({ k: 4, threshold: 0.5 })
+  })
+
+  it('uses RAG_RETRIEVAL_K and RAG_RELEVANCE_THRESHOLD from the environment when set', () => {
+    expect(resolveRetrievalConfig({ RAG_RETRIEVAL_K: '8', RAG_RELEVANCE_THRESHOLD: '0.75' }))
+      .toEqual({ k: 8, threshold: 0.75 })
+  })
+
+  it('falls back to the defaults for a blank or non-numeric value, rather than parsing it as 0 or NaN', () => {
+    expect(resolveRetrievalConfig({ RAG_RETRIEVAL_K: '', RAG_RELEVANCE_THRESHOLD: 'not-a-number' }))
+      .toEqual({ k: 4, threshold: 0.5 })
   })
 })
 
