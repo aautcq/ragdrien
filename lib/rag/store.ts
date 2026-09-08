@@ -33,7 +33,8 @@ function cosineSimilarity(a: number[], b: number[]): number {
 /**
  * A minimal in-memory vector index: holds (chunk, embedding) pairs for the
  * lifetime of the server process and answers similarity queries over them.
- * No persistence — rebuilt from scratch on every server start.
+ * The source of truth is the SQLite chunks table (see loadRagStore/saveChunks
+ * in lib/rag/index.ts) — this class itself holds no persistence logic.
  */
 export class RagStore {
   private entries: RagStoreEntry[] = []
@@ -44,6 +45,11 @@ export class RagStore {
 
   get size(): number {
     return this.entries.length
+  }
+
+  /** Returns every (chunk, embedding) pair currently in the store — used to persist it (see Ingestion). */
+  list(): RagStoreEntry[] {
+    return [...this.entries]
   }
 
   /** Returns the k entries whose embeddings are most similar to queryEmbedding. */

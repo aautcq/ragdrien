@@ -1,4 +1,4 @@
-# Ragdrien
+# RAGdrien
 
 A personal chatbot: visitors converse with a locally-running LLM about the site owner, with replies grounded in the owner's own documents (RAG) whenever retrieval finds relevant content. This is the Next.js/React/shadcn sibling of the original Nuxt/Vue implementation, kept feature-identical.
 
@@ -35,8 +35,18 @@ A contiguous slice of a Document's extracted text, sized to fit the embedding mo
 The numeric vector representation of a Chunk, produced by the embedding model.
 
 **Vector store**:
-The in-memory index of (Chunk, Embedding) pairs, built lazily on first use and held for the server process's lifetime. Not persisted to disk.
+The index of (Chunk, Embedding) pairs used for Retrieval, persisted in SQLite and loaded into memory the first time a chat request needs it (cached for the server process's lifetime). Rebuilt only by explicitly running Ingestion — never automatically — so the server always serves from whatever was last ingested.
+
+**Ingestion**:
+The process of parsing Documents, chunking them, computing Embeddings, and writing the result into the Vector store, replacing its previous contents. Run explicitly via `npm run ingest-documents`; never triggered automatically (in particular, not on server start).
 
 **Source**:
 A Document that contributed at least one Chunk to a turn's grounding context, shown to the visitor as a "Sources:" list beneath the reply once it has finished streaming. Chunks from the same Document collapse into a single Source entry, ordered by that Document's best-scoring Chunk, highest first. Links out to the Document's source url when it has one (see Document). Absent entirely from an ungrounded turn's reply.
 _Avoid_: Citation, Reference
+
+**Chat**:
+A persisted conversation between a visitor and the assistant: an ordered sequence of Turns, identified by an id and shown in the sidebar by its title. Survives across page loads and server restarts.
+_Avoid_: Conversation, session
+
+**Message**:
+One persisted entry in a Chat's transcript — either side of a Turn (the visitor's message or the assistant's reply) — stored with its full content, including any Source parts streamed with it.

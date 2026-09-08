@@ -1,5 +1,5 @@
 {
-  "name": "ragdrien-react",
+  "name": "ragdrien",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "fetch-document": "tsx scripts/fetch-document.ts"
+    "fetch-document": "tsx scripts/fetch-document.ts",
+    "ingest-documents": "tsx scripts/ingest-documents.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.90",
@@ -23,6 +24,7 @@
     "ai": "^7.0.87",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cn": "^0.2.6",
     "lucide-react": "^1.39.0",
     "next": "16.3.4",
     "next-themes": "^0.4.6",
@@ -40,7 +42,7 @@
     "@next/env": "^16.3.4",
     "@tailwindcss/postcss": "^4",
     "@types/jsdom": "^30.0.0",
-    "@types/node": "^20",
+    "@types/node": "^24.13.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

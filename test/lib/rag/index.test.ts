@@ -68,49 +68,72 @@ describe('getRagStore', () => {
     vi.resetModules()
   })
 
-  it('builds the store once and caches it across calls', async () => {
-    const { getRagStore } = await import('@/lib/rag/index')
+  it('loads whatever is persisted in the database', async () => {
+    const { createDb } = await import('@/lib/db')
+    const { saveChunks, getRagStore } = await import('@/lib/rag/index')
+    const { RagStore } = await import('@/lib/rag/store')
 
-    // Use an empty documents dir and no embeddings client: keeps this test
-    // hermetic (independent of real Ollama and whatever's really under
-    // lib/rag/documents/) since it only cares about the caching behavior.
-    const dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
-    try {
-      const first = await getRagStore({ documentsDir: dir })
-      const second = await getRagStore({ documentsDir: dir })
+    const db = createDb(':memory:')
+    const store = new RagStore()
+    store.add([{ chunk: { documentId: 'about.md', index: 0, content: 'hello' }, embedding: [1, 0, 0] }])
+    saveChunks(store, db)
 
-      expect(second).toBe(first)
-    } finally {
-      await rm(dir, { recursive: true, force: true })
-    }
+    const loaded = await getRagStore(db)
+
+    expect(loaded.size).toBe(1)
+    expect(loaded.similaritySearch([1, 0, 0], 1)).toEqual([
+      { chunk: { documentId: 'about.md', index: 0, content: 'hello' }, score: 1 }
+    ])
   })
 
-  it('retries on the next call instead of caching a failed build', async () => {
+  it('warns and returns an empty store when nothing has been ingested yet', async () => {
+    const { createDb } = await import('@/lib/db')
     const { getRagStore } = await import('@/lib/rag/index')
 
-    const dir = await mkdtemp(join(tmpdir(), 'ragdrien-rag-'))
-    try {
-      await writeFile(join(dir, 'about.md'), '# About\n\nA short paragraph about the owner.')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const db = createDb(':memory:')
 
-      let attempt = 0
-      const embeddings = {
-        embedDocuments: async (texts: string[]) => {
-          attempt++
-          if (attempt === 1) {
-            throw new Error('transient failure')
-          }
-          return texts.map(() => [1, 0, 0])
-        }
-      } as unknown as Embeddings
+    const store = await getRagStore(db)
 
-      await expect(getRagStore({ documentsDir: dir, embeddings })).rejects.toThrow('transient failure')
+    expect(store.size).toBe(0)
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('ingest-documents'))
 
-      const store = await getRagStore({ documentsDir: dir, embeddings })
+    warn.mockRestore()
+  })
 
-      expect(store.size).toBe(1)
-      expect(attempt).toBe(2)
-    } finally {
-      await rm(dir, { recursive: true, force: true })
-    }
+  it('caches the loaded store across calls', async () => {
+    const { createDb } = await import('@/lib/db')
+    const { getRagStore } = await import('@/lib/rag/index')
+
+    const db = createDb(':memory:')
+
+    const first = await getRagStore(db)
+    const second = await getRagStore(db)
+
+    expect(second).toBe(first)
+  })
+})
+
+describe('saveChunks', () => {
+  it('replaces the persisted chunks with the store\'s current contents', async () => {
+    const { createDb } = await import('@/lib/db')
+    const { saveChunks, loadRagStore } = await import('@/lib/rag/index')
+    const { RagStore } = await import('@/lib/rag/store')
+
+    const db = createDb(':memory:')
+
+    const first = new RagStore()
+    first.add([{ chunk: { documentId: 'about.md', index: 0, content: 'old' }, embedding: [1, 0] }])
+    saveChunks(first, db)
+
+    const second = new RagStore()
+    second.add([{ chunk: { documentId: 'profile.md', index: 0, content: 'new', sourceUrl: 'https://example.com' }, embedding: [0, 1] }])
+    saveChunks(second, db)
+
+    const loaded = loadRagStore(db)
+    expect(loaded.size).toBe(1)
+    expect(loaded.similaritySearch([0, 1], 1)).toEqual([
+      { chunk: { documentId: 'profile.md', index: 0, content: 'new', sourceUrl: 'https://example.com' }, score: 1 }
+    ])
   })
 })

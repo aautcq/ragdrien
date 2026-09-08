@@ -3,6 +3,7 @@ import { Inter, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+import { AppShell } from "@/components/app-shell";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -15,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Ragdrien Chat",
-  description: "Chat with a locally-running Ollama model.",
+  title: "RAGdrien",
+  description: "Chat with a locally-running Ollama model about Adrien Autricque.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,14 +27,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider>
+            <AppShell>
+              {children}
+            </AppShell>
+          </TooltipProvider>
         </ThemeProvider>
       </body>
     </html>

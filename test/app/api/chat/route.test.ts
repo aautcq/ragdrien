@@ -6,6 +6,7 @@ import { RagStore } from '@/lib/rag/store'
 
 const { getRagStore } = vi.hoisted(() => ({ getRagStore: vi.fn() }))
 const { createEmbeddings } = vi.hoisted(() => ({ createEmbeddings: vi.fn() }))
+const { saveMessages } = vi.hoisted(() => ({ saveMessages: vi.fn() }))
 
 vi.mock('@/lib/rag/index', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/rag/index')>()),
@@ -14,6 +15,10 @@ vi.mock('@/lib/rag/index', async (importOriginal) => ({
 vi.mock('@/lib/rag/embeddings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/rag/embeddings')>()),
   createEmbeddings
+}))
+vi.mock('@/lib/chat/chats', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/chat/chats')>()),
+  saveMessages
 }))
 
 const { POST } = await import('@/app/api/chat/route')
@@ -30,6 +35,7 @@ beforeEach(() => {
   // real documents happen to be under lib/rag/documents/.
   getRagStore.mockReset().mockResolvedValue(new RagStore())
   createEmbeddings.mockReset().mockReturnValue(fakeEmbeddings([]))
+  saveMessages.mockReset()
 })
 
 function postChat(body: unknown) {
@@ -358,5 +364,47 @@ describe('POST /api/chat (retrieval query rewriting)', () => {
 
     expect(text).toContain('"type":"error"')
     expect(text).toContain('not found')
+  })
+})
+
+describe('POST /api/chat (persistence)', () => {
+  const MODEL = 'custom-test-model'
+  let ollama: FakeOllamaServer
+
+  beforeEach(async () => {
+    ollama = await startFakeOllama(() => ({ chunks: successChunks('reply', MODEL) }))
+    process.env.OLLAMA_BASE_URL = ollama.url
+    process.env.OLLAMA_MODEL = MODEL
+  })
+
+  afterEach(async () => {
+    await ollama.close()
+    process.env = { ...ORIGINAL_ENV }
+  })
+
+  it('persists the full conversation plus the new assistant reply, keyed by the request\'s chat id', async () => {
+    const response = await postChat({
+      id: 'chat-1',
+      messages: [userMessage('1', 'hi')]
+    })
+    await response.text()
+
+    expect(saveMessages).toHaveBeenCalledTimes(1)
+    const [chatId, messages] = saveMessages.mock.calls[0]!
+    expect(chatId).toBe('chat-1')
+    expect(messages).toEqual([
+      userMessage('1', 'hi'),
+      expect.objectContaining({
+        role: 'assistant',
+        parts: [{ type: 'text', text: 'reply' }]
+      })
+    ])
+  })
+
+  it('does not persist anything when the request has no chat id', async () => {
+    const response = await postChat({ messages: [userMessage('1', 'hi')] })
+    await response.text()
+
+    expect(saveMessages).not.toHaveBeenCalled()
   })
 })

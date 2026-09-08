@@ -3,6 +3,7 @@ import { ChatOllama } from '@langchain/ollama'
 import { createUIMessageStream, createUIMessageStreamResponse } from 'ai'
 import type { BaseMessage } from '@langchain/core/messages'
 import type { UIMessage } from 'ai'
+import { saveMessages } from '@/lib/chat/chats'
 import { extractText } from '@/lib/chat/messages'
 import { resolveOllamaConfig } from '@/lib/ollama/config'
 import { createEmbeddings } from '@/lib/rag/embeddings'
@@ -24,7 +25,7 @@ function toConversation(messages: UIMessage[]): BaseMessage[] {
 }
 
 export async function POST(request: Request) {
-  const { messages } = await request.json() as { messages: UIMessage[] }
+  const { id: chatId, messages } = await request.json() as { id?: string, messages: UIMessage[] }
 
   // Conversational turn: the full visitor-visible transcript reaches the
   // model, not just the latest message.
@@ -67,12 +68,14 @@ export async function POST(request: Request) {
         : conversation
 
       const id = crypto.randomUUID()
+      let fullText = ''
 
       writer.write({ type: 'text-start', id })
 
       for await (const chunk of await model.stream(prompt)) {
         const delta = typeof chunk.content === 'string' ? chunk.content : ''
         if (delta) {
+          fullText += delta
           writer.write({ type: 'text-delta', id, delta })
         }
       }
@@ -84,10 +87,30 @@ export async function POST(request: Request) {
       // a known origin URL (see RagDocument.sourceUrl) streams as the AI
       // SDK's source-url part so the client can link to it; otherwise it
       // streams as source-document, identified only by its media type.
-      for (const { sourceId, mediaType, title, url } of chunksToSources(chunks)) {
-        writer.write(url
-          ? { type: 'source-url', sourceId, url, title }
-          : { type: 'source-document', sourceId, mediaType, title })
+      const sources = chunksToSources(chunks)
+      const sourceParts = sources.map(({ sourceId, mediaType, title, url }) =>
+        url
+          ? { type: 'source-url' as const, sourceId, url, title }
+          : { type: 'source-document' as const, sourceId, mediaType, title })
+
+      for (const part of sourceParts) {
+        writer.write(part)
+      }
+
+      // Persist the completed turn: the received transcript already holds
+      // everything up to and including the visitor's latest message (see
+      // "Conversational turn"), so appending the assistant's reply and
+      // overwriting the Chat's stored Messages captures the whole thing —
+      // see docs/adr/0006-sqlite-for-chat-and-vector-store-persistence.md.
+      // Skipped when the request has no chat id (e.g. a request made
+      // outside a persisted Chat).
+      if (chatId) {
+        const assistantMessage: UIMessage = {
+          id,
+          role: 'assistant',
+          parts: [{ type: 'text', text: fullText }, ...sourceParts]
+        }
+        saveMessages(chatId, [...messages, assistantMessage])
       }
     },
     // Surface a clear error to the client (e.g. Ollama unreachable, model not
