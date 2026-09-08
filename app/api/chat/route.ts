@@ -3,20 +3,11 @@ import { ChatOllama } from '@langchain/ollama'
 import { createUIMessageStream, createUIMessageStreamResponse } from 'ai'
 import type { BaseMessage } from '@langchain/core/messages'
 import type { UIMessage } from 'ai'
+import { extractText } from '@/lib/chat/messages'
 import { resolveOllamaConfig } from '@/lib/ollama/config'
 import { createEmbeddings } from '@/lib/rag/embeddings'
 import { getRagStore } from '@/lib/rag/index'
 import { buildContextMessage, buildRetrievalQuery, chunksToSources, retrieveRelevantChunks } from '@/lib/rag/retrieval'
-
-/**
- * Extracts the plain text of a message, ignoring any non-text parts.
- */
-function extractText(message: UIMessage): string {
-  return message.parts
-    .filter(part => part.type === 'text')
-    .map(part => part.text)
-    .join('')
-}
 
 /**
  * Converts the visitor-visible transcript into the langchain messages sent to

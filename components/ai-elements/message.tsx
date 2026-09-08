@@ -6,6 +6,7 @@ import {
   ButtonGroup,
   ButtonGroupText,
 } from "@/components/ui/button-group";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +20,12 @@ import { math } from "@streamdown/math";
 import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
+import type {
+  ComponentProps,
+  HTMLAttributes,
+  KeyboardEventHandler,
+  ReactElement,
+} from "react";
 import {
   createContext,
   memo,
@@ -66,14 +72,93 @@ export const MessageContent = ({
   </div>
 );
 
+export type MessageEditFormProps = HTMLAttributes<HTMLDivElement> & {
+  value: string;
+  onValueChange: (value: string) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
+  /** Disables sending (e.g. a response is in flight elsewhere). Cancel stays available. */
+  disabled?: boolean;
+};
+
+/**
+ * Inline replacement for MessageContent while a previously sent message is
+ * being edited. Enter submits (Shift+Enter inserts a newline, matching the
+ * main composer) and Escape cancels back to the read-only view.
+ */
+export const MessageEditForm = ({
+  value,
+  onValueChange,
+  onSubmit,
+  onCancel,
+  disabled,
+  className,
+  ...props
+}: MessageEditFormProps) => {
+  const canSubmit = !disabled && value.trim().length > 0;
+
+  const handleKeyDown: KeyboardEventHandler<HTMLTextAreaElement> = useCallback(
+    (event) => {
+      if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+        event.preventDefault();
+        if (canSubmit) {
+          onSubmit();
+        }
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        onCancel();
+      }
+    },
+    [canSubmit, onSubmit, onCancel]
+  );
+
+  return (
+    <div
+      className={cn("flex w-full max-w-full flex-col gap-2", className)}
+      {...props}
+    >
+      <Textarea
+        autoFocus
+        value={value}
+        onChange={(event) => onValueChange(event.target.value)}
+        onKeyDown={handleKeyDown}
+        className="min-h-16"
+      />
+      <div className="flex justify-end gap-2">
+        <Button size="sm" type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button
+          size="sm"
+          type="button"
+          disabled={!canSubmit}
+          onClick={onSubmit}
+        >
+          Send
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 export type MessageActionsProps = ComponentProps<"div">;
 
+/**
+ * Wraps per-message actions (e.g. the edit button — see MessageEditForm)
+ * that stay hidden until the user hovers or focuses within the Message.
+ */
 export const MessageActions = ({
   className,
   children,
   ...props
 }: MessageActionsProps) => (
-  <div className={cn("flex items-center gap-1", className)} {...props}>
+  <div
+    className={cn(
+      "flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100",
+      className
+    )}
+    {...props}
+  >
     {children}
   </div>
 );
