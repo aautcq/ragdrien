@@ -13,13 +13,26 @@ import { AppLogo } from "@/components/app-logo"
 import { AppSidebarNavLink } from "@/components/app-sidebar-nav-link"
 import { AppSidebarDeleteChatButton } from "@/components/app-sidebar-delete-chat-button"
 import { getChats } from "@/lib/chat/chats"
+import { SearchChats } from "@/components/search-chats"
+import { Plus } from "lucide-react"
 
 export async function AppSidebar() {
   const chats = getChats()
 
   return (
     <Sidebar variant="floating">
-      <SidebarHeader><span className="sr-only">Your chats</span></SidebarHeader>
+      <SidebarHeader>
+        <h2 className="sr-only">Your chats</h2>
+
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SearchChats />
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <AppSidebarNavLink href="/"><Plus className="size-3.5" /> New chat</AppSidebarNavLink>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Your chats</SidebarGroupLabel>
@@ -33,9 +46,6 @@ export async function AppSidebar() {
                   <AppSidebarDeleteChatButton id={chat.id} />
                 </SidebarMenuItem>
               ))}
-              <SidebarMenuItem>
-                <AppSidebarNavLink href="/">+ New chat</AppSidebarNavLink>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
