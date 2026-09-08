@@ -2,6 +2,17 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+ * Tailwind's automatic content detection skips `node_modules`, so classes
+ * used only inside Streamdown's compiled markdown renderers (e.g.
+ * `list-disc`/`list-decimal` on `<ul>`/`<ol>`) never get generated even
+ * though the DOM has the class attributes. Opt Streamdown's own package
+ * back in explicitly. The `@streamdown/*` plugin packages (cjk, code,
+ * math, mermaid) render no Tailwind classes of their own, so they don't
+ * need to be listed here.
+ */
+@source "../node_modules/streamdown/dist/**/*.js";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
