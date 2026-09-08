@@ -25,7 +25,8 @@ import {
   PromptInputFooter,
   PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
-import { PencilIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PencilIcon, RotateCcwIcon } from "lucide-react";
 import { extractText } from "@/lib/chat/messages";
 
 export default function Home() {
@@ -33,7 +34,7 @@ export default function Home() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
 
-  const { messages, status, error, sendMessage, stop } = useChat({
+  const { messages, status, error, sendMessage, regenerate, stop } = useChat({
     onError(err) {
       console.error(err);
     },
@@ -42,6 +43,10 @@ export default function Home() {
   // Editing is only safe once the model isn't actively producing a response
   // (there's nothing in-flight for a truncating resend to race with).
   const canEdit = status === "ready" || status === "error";
+
+  // Regenerating/retrying share canEdit's "nothing in-flight" requirement,
+  // plus they must not race an in-progress edit of another message.
+  const canRegenerate = canEdit && editingMessageId === null;
 
   function handleSubmit(message: { text: string }) {
     if (!message.text.trim() || editingMessageId !== null) {
@@ -90,7 +95,7 @@ export default function Home() {
               description="Ask me anything about Adrien..."
             />
           ) : (
-            messages.map((message) =>
+            messages.map((message, index) =>
               message.role === "user" && editingMessageId === message.id ? (
                 <Message from={message.role} key={message.id}>
                   <MessageEditForm
@@ -139,6 +144,19 @@ export default function Home() {
                       </MessageAction>
                     </MessageActions>
                   )}
+                  {message.role === "assistant" &&
+                    index === messages.length - 1 && (
+                      <MessageActions className="justify-start">
+                        <MessageAction
+                          tooltip="Regenerate"
+                          label="Regenerate response"
+                          disabled={!canRegenerate}
+                          onClick={() => regenerate()}
+                        >
+                          <RotateCcwIcon className="size-3.5" />
+                        </MessageAction>
+                      </MessageActions>
+                    )}
                 </Message>
               )
             )
@@ -148,7 +166,18 @@ export default function Home() {
       </Conversation>
 
       {error && (
-        <p className="text-destructive px-4 text-sm">{error.message}</p>
+        <div className="flex items-center gap-2 px-4 text-sm">
+          <p className="text-destructive">{error.message}</p>
+          <Button
+            size="sm"
+            type="button"
+            variant="ghost"
+            disabled={!canRegenerate}
+            onClick={() => regenerate()}
+          >
+            Retry
+          </Button>
+        </div>
       )}
 
       <PromptInput onSubmit={handleSubmit}>
