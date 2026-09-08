@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
 import {
@@ -17,7 +17,13 @@ import {
   MessageEditForm,
   MessageResponse,
   MessageSources,
+  MessageTimestamp,
 } from "@/components/ai-elements/message";
+import {
+  formatMessageTime,
+  syncMessageTimestamps,
+  withRefreshedTimestamp,
+} from "@/lib/chat/timestamps";
 import {
   PromptInput,
   PromptInputBody,
@@ -28,6 +34,22 @@ import {
 import { Button } from "@/components/ui/button";
 import { CheckIcon, CopyIcon, PencilIcon, RotateCcwIcon } from "lucide-react";
 import { extractText } from "@/lib/chat/messages";
+
+/**
+ * Renders a message's timestamp once it's been recorded (see the
+ * `messageTimestamps` effect below). Omitted entirely for the one render
+ * before a brand-new message id is recorded, rather than falling back to
+ * `Date.now()` during render.
+ */
+function renderMessageTimestamp(
+  messageId: string,
+  messageTimestamps: Map<string, number>
+) {
+  const timestamp = messageTimestamps.get(messageId);
+  return timestamp === undefined ? null : (
+    <MessageTimestamp time={formatMessageTime(timestamp)} />
+  );
+}
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -40,6 +62,28 @@ export default function Home() {
       console.error(err);
     },
   });
+
+  // Client-only send/receipt times: nothing is persisted server-side, so a
+  // message's timestamp is just the moment it first appeared in this state
+  // — see lib/chat/timestamps.ts.
+  const [messageTimestamps, setMessageTimestamps] = useState<
+    Map<string, number>
+  >(new Map());
+
+  useEffect(() => {
+    const messageIds = messages.map((message) => message.id);
+    const now = Date.now();
+    const next = syncMessageTimestamps(messageTimestamps, messageIds, now);
+
+    if (next !== messageTimestamps) {
+      // This effect exists to synchronize local timestamp bookkeeping with
+      // `messages`, an external system's state (the AI SDK's own chat
+      // instance, whose message ids we don't control and can't timestamp
+      // any other way) — the documented case for setState-in-effect.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMessageTimestamps(next);
+    }
+  }, [messages, messageTimestamps]);
 
   // Editing is only safe once the model isn't actively producing a response
   // (there's nothing in-flight for a truncating resend to race with).
@@ -92,6 +136,12 @@ export default function Home() {
     // CONTEXT.md's "Turn" and "Conversational turn" terms.
     sendMessage({ text: editText, messageId });
 
+    // The edited message keeps its original id, so its recorded timestamp
+    // wouldn't otherwise update — refresh it to the edit time.
+    setMessageTimestamps((prev) =>
+      withRefreshedTimestamp(prev, messageId, Date.now())
+    );
+
     setEditingMessageId(null);
     setEditText("");
   }
@@ -109,6 +159,7 @@ export default function Home() {
             messages.map((message, index) =>
               message.role === "user" && editingMessageId === message.id ? (
                 <Message from={message.role} key={message.id}>
+                  {renderMessageTimestamp(message.id, messageTimestamps)}
                   <MessageEditForm
                     value={editText}
                     onValueChange={setEditText}
@@ -119,6 +170,7 @@ export default function Home() {
                 </Message>
               ) : (
                 <Message from={message.role} key={message.id}>
+                  {renderMessageTimestamp(message.id, messageTimestamps)}
                   <MessageContent>
                     {message.parts.map((part, index) =>
                       part.type === "text" ? (

@@ -52,6 +52,33 @@ export const Message = ({ className, from, ...props }: MessageProps) => (
   />
 );
 
+export type MessageTimestampProps = HTMLAttributes<HTMLDivElement> & {
+  time: string;
+};
+
+/**
+ * Subtle send/receipt time shown above a message's content, aligned to the
+ * same side as its bubble (right for the visitor, left for the assistant).
+ * See lib/chat/timestamps.ts for how `time` is derived.
+ */
+export const MessageTimestamp = ({
+  time,
+  className,
+  ...props
+}: MessageTimestampProps) => (
+  <div
+    className={cn(
+      "text-xs text-muted-foreground",
+      "group-[.is-user]:text-right",
+      "group-[.is-assistant]:text-left",
+      className
+    )}
+    {...props}
+  >
+    {time}
+  </div>
+);
+
 export type MessageContentProps = HTMLAttributes<HTMLDivElement>;
 
 export const MessageContent = ({
