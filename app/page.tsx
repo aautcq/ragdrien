@@ -26,13 +26,14 @@ import {
   PromptInputSubmit,
 } from "@/components/ai-elements/prompt-input";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, RotateCcwIcon } from "lucide-react";
+import { CheckIcon, CopyIcon, PencilIcon, RotateCcwIcon } from "lucide-react";
 import { extractText } from "@/lib/chat/messages";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
   const { messages, status, error, sendMessage, regenerate, stop } = useChat({
     onError(err) {
@@ -66,6 +67,16 @@ export default function Home() {
   function cancelEdit() {
     setEditingMessageId(null);
     setEditText("");
+  }
+
+  function copyMessage(message: UIMessage) {
+    navigator.clipboard
+      .writeText(extractText(message))
+      .then(() => {
+        setCopiedMessageId(message.id);
+        setTimeout(() => setCopiedMessageId((id) => (id === message.id ? null : id)), 1500);
+      })
+      .catch((err) => console.error(err));
   }
 
   function submitEdit(messageId: string) {
@@ -144,9 +155,21 @@ export default function Home() {
                       </MessageAction>
                     </MessageActions>
                   )}
-                  {message.role === "assistant" &&
-                    index === messages.length - 1 && (
-                      <MessageActions className="justify-start">
+                  {message.role === "assistant" && (
+                    <MessageActions className="justify-start">
+                      <MessageAction
+                        tooltip="Copy"
+                        label="Copy message"
+                        disabled={index === messages.length - 1 && !canEdit}
+                        onClick={() => copyMessage(message)}
+                      >
+                        {copiedMessageId === message.id ? (
+                          <CheckIcon className="size-3.5" />
+                        ) : (
+                          <CopyIcon className="size-3.5" />
+                        )}
+                      </MessageAction>
+                      {index === messages.length - 1 && (
                         <MessageAction
                           tooltip="Regenerate"
                           label="Regenerate response"
@@ -155,8 +178,9 @@ export default function Home() {
                         >
                           <RotateCcwIcon className="size-3.5" />
                         </MessageAction>
-                      </MessageActions>
-                    )}
+                      )}
+                    </MessageActions>
+                  )}
                 </Message>
               )
             )
