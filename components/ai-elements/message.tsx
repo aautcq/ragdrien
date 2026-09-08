@@ -187,7 +187,9 @@ export const MessageAction = ({
     return (
       <TooltipProvider>
         <Tooltip>
-          <TooltipTrigger>{button}</TooltipTrigger>
+          {/* `render` composes the trigger's behavior onto the Button's own
+              <button>, instead of nesting a second <button> around it. */}
+          <TooltipTrigger render={button} />
           <TooltipContent>
             <p>{tooltip}</p>
           </TooltipContent>
