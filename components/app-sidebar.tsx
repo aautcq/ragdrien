@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/sidebar"
 import { AppLogo } from "@/components/app-logo"
 import { AppSidebarNavLink } from "@/components/app-sidebar-nav-link"
+import { AppSidebarDeleteChatButton } from "@/components/app-sidebar-delete-chat-button"
 import { getChats } from "@/lib/chat/chats"
 
 export async function AppSidebar() {
@@ -18,7 +19,7 @@ export async function AppSidebar() {
 
   return (
     <Sidebar variant="floating">
-      <SidebarHeader>Your chats</SidebarHeader>
+      <SidebarHeader><span className="sr-only">Your chats</span></SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Your chats</SidebarGroupLabel>
@@ -29,6 +30,7 @@ export async function AppSidebar() {
                   <AppSidebarNavLink href={`/${chat.id}`}>
                     <span>{chat.title}</span>
                   </AppSidebarNavLink>
+                  <AppSidebarDeleteChatButton id={chat.id} />
                 </SidebarMenuItem>
               ))}
               <SidebarMenuItem>

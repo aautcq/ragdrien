@@ -133,3 +133,10 @@ export function saveMessages(chatId: string, messages: UIMessage[], db: Database
 export function updateTitle(chatId: string, title: string, db: DatabaseSync = getDb()): void {
   db.prepare('UPDATE chats SET title = ? WHERE id = ?').run(title, chatId)
 }
+
+export function deleteChat(id: string) {
+  const db = getDb()
+  db.prepare('DELETE FROM messages WHERE chat_id = ?').run(id)
+  db.prepare('DELETE FROM chats WHERE id = ?').run(id)
+  return true
+}
