@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
+import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
 import { createDb } from '@/lib/db'
-import { createChat, getChat, getChats, saveMessages } from '@/lib/chat/chats'
+import { createChat, generateTitle, getChat, getChats, saveMessages, updateTitle } from '@/lib/chat/chats'
 import { assistantMessage, userMessage } from '../../helpers/ui-messages'
 
 describe('createChat', () => {
@@ -95,5 +96,66 @@ describe('saveMessages', () => {
       assistantMessage('a1', 'hello!'),
       userMessage('u2', 'and you?')
     ])
+  })
+})
+
+function fakeModel(reply: string): { model: BaseChatModel, invokedWith: () => unknown[] } {
+  let invokedWith: unknown[] = []
+  const model = {
+    invoke: async (messages: unknown[]) => {
+      invokedWith = messages
+      return { content: reply }
+    }
+  } as unknown as BaseChatModel
+  return { model, invokedWith: () => invokedWith }
+}
+
+describe('generateTitle', () => {
+  it('returns the model\'s trimmed summary of the message', async () => {
+    const { model } = fakeModel('  Owner\'s hometown  ')
+
+    const title = await generateTitle('Where does the owner live?', model)
+
+    expect(title).toBe('Owner\'s hometown')
+  })
+
+  it('sends the message text plus a summarization instruction to the model', async () => {
+    const { model, invokedWith } = fakeModel('Some title')
+
+    await generateTitle('Where does the owner live?', model)
+
+    const sent = invokedWith() as { content: string }[]
+    expect(sent[0]?.content).toBe('Where does the owner live?')
+    expect(sent).toHaveLength(2)
+  })
+
+  it('truncates a model reply longer than the sidebar title limit', async () => {
+    const { model } = fakeModel('a'.repeat(100))
+
+    const title = await generateTitle('hi', model)
+
+    expect(title).toBe(`${'a'.repeat(60)}…`)
+  })
+
+  it('throws when the model returns a blank reply, so callers keep the fallback title', async () => {
+    const { model } = fakeModel('   ')
+
+    await expect(generateTitle('hi', model)).rejects.toThrow()
+  })
+})
+
+describe('updateTitle', () => {
+  let db: DatabaseSync
+
+  beforeEach(() => {
+    db = createDb(':memory:')
+  })
+
+  it('replaces the persisted title for the given chat', () => {
+    const chat = createChat('hi', db)
+
+    updateTitle(chat.id, 'A better title', db)
+
+    expect(getChats(db)).toEqual([{ id: chat.id, title: 'A better title' }])
   })
 })
