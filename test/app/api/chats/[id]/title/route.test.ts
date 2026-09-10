@@ -95,6 +95,13 @@ describe('PATCH /api/chats/[id]/title', () => {
     expect(sent[0]?.content).toBe('Where does the owner live? Tell me all about it in great detail please')
   })
 
+  it('caps generation to a small token budget, as a backstop against the model ignoring the word-count instruction', async () => {
+    const response = await patchTitle('chat-1')
+    await readAll(response)
+
+    expect(ollama.requests[0]?.body.options).toMatchObject({ num_predict: 20 })
+  })
+
   it('persists the trimmed, length-capped title via after(), without blocking the response', async () => {
     const response = await patchTitle('chat-1')
     await readAll(response)

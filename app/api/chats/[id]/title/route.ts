@@ -25,7 +25,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   const { baseUrl, model: modelName } = resolveOllamaConfig();
-  const model = new ChatOllama({ baseUrl, model: modelName });
+  // numPredict hard-caps generation at a small token budget — a backstop
+  // for when the Model ignores TITLE_INSTRUCTION's word-count ask and
+  // starts producing a full sentence instead of a short title (see
+  // lib/chat/titles.ts). Specific to this route: the main chat model
+  // (app/api/chat/route.ts) has no such cap, since replies there are
+  // meant to be long-form.
+  const model = new ChatOllama({ baseUrl, model: modelName, numPredict: 20, temperature: 0.2 });
   const stream = generateTitle(extractText(openingMessage), model);
 
   // The stream is consumed twice — once by the client via the returned

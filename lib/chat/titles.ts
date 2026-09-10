@@ -39,10 +39,16 @@ export function deriveTitle(text: string): string {
 /**
  * Appended to a Chat's opening message to have the Model summarize it into
  * a short sidebar title — mirrors buildRetrievalQuery's instruction-message
- * pattern in lib/rag/retrieval.ts.
+ * pattern in lib/rag/retrieval.ts. Spells out a strict word count and gives
+ * an example, since a vaguer ask ("a short title", "at most a few words")
+ * left models producing full sentences that then just got hard-truncated
+ * by capTitleLength — not what a sidebar title should look like. The
+ * Model's numPredict cap (see app/api/chats/[id]/title/route.ts) is the
+ * backstop for when it ignores this anyway.
  */
-const TITLE_INSTRUCTION = 'Summarize the visitor\'s message above as a short title for a chat list, at most a few '
-  + 'words, no punctuation at the end, no quotes. Respond with only the title.'
+const TITLE_INSTRUCTION = 'Summarize the visitor\'s message above as a title for a chat list: 3 to 6 words, '
+  + 'title case, no punctuation, no quotes, no explanations. Respond with only the title itself and nothing '
+  + 'else — for example: Owner\'s Favorite Hobby'
 
 /**
  * Streams the Model's summary of `text` (a Chat's opening message) as raw
