@@ -12,6 +12,7 @@ import {
 import { AppLogo } from "@/components/app-logo"
 import { AppSidebarNavLink } from "@/components/app-sidebar-nav-link"
 import { AppSidebarDeleteChatButton } from "@/components/app-sidebar-delete-chat-button"
+import { AppSidebarChatTitle } from "@/components/app-sidebar-chat-title"
 import { getChats } from "@/lib/chat/chats"
 import { SearchChats } from "@/components/search-chats"
 import { Plus } from "lucide-react"
@@ -41,7 +42,7 @@ export async function AppSidebar() {
               {chats.map((chat) => (
                 <SidebarMenuItem key={chat.id}>
                   <AppSidebarNavLink href={`/${chat.id}`}>
-                    <span>{chat.title}</span>
+                    <AppSidebarChatTitle id={chat.id} title={chat.title} />
                   </AppSidebarNavLink>
                   <AppSidebarDeleteChatButton id={chat.id} />
                 </SidebarMenuItem>

@@ -1,3 +1,7 @@
+---
+Status: superseded by 0008
+---
+
 # LLM-generated Chat titles
 
 A Chat's sidebar title used to be a plain truncation of its opening Message's text, which reads awkwardly for anything longer than a short sentence. Titles are now summarized by the Model instead.

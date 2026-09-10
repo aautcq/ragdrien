@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
-import type { BaseChatModel } from '@langchain/core/language_models/chat_models'
+import { ChatOllama } from '@langchain/ollama'
 import { createDb } from '@/lib/db'
 import { createChat, generateTitle, getChat, getChats, saveMessages, updateTitle } from '@/lib/chat/chats'
 import { assistantMessage, userMessage } from '../../helpers/ui-messages'
+import { startFakeOllama, successChunks, type FakeOllamaServer } from '../../helpers/fake-ollama'
 
 describe('createChat', () => {
   let db: DatabaseSync
@@ -99,48 +100,46 @@ describe('saveMessages', () => {
   })
 })
 
-function fakeModel(reply: string): { model: BaseChatModel, invokedWith: () => unknown[] } {
-  let invokedWith: unknown[] = []
-  const model = {
-    invoke: async (messages: unknown[]) => {
-      invokedWith = messages
-      return { content: reply }
-    }
-  } as unknown as BaseChatModel
-  return { model, invokedWith: () => invokedWith }
+async function readAll(stream: ReadableStream<Uint8Array>): Promise<string> {
+  const reader = stream.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  while (true) {
+    const { value, done } = await reader.read()
+    if (done) break
+    text += decoder.decode(value, { stream: true })
+  }
+  return text
 }
 
 describe('generateTitle', () => {
-  it('returns the model\'s trimmed summary of the message', async () => {
-    const { model } = fakeModel('  Owner\'s hometown  ')
+  const MODEL = 'test-model'
+  let ollama: FakeOllamaServer
 
-    const title = await generateTitle('Where does the owner live?', model)
+  beforeEach(async () => {
+    ollama = await startFakeOllama(() => ({ chunks: successChunks('Owner\'s hometown', MODEL) }))
+  })
+
+  afterEach(async () => {
+    await ollama.close()
+  })
+
+  it('streams the model\'s summary of the message as text chunks', async () => {
+    const model = new ChatOllama({ baseUrl: ollama.url, model: MODEL })
+
+    const title = await readAll(generateTitle('Where does the owner live?', model))
 
     expect(title).toBe('Owner\'s hometown')
   })
 
   it('sends the message text plus a summarization instruction to the model', async () => {
-    const { model, invokedWith } = fakeModel('Some title')
+    const model = new ChatOllama({ baseUrl: ollama.url, model: MODEL })
 
-    await generateTitle('Where does the owner live?', model)
+    await readAll(generateTitle('Where does the owner live?', model))
 
-    const sent = invokedWith() as { content: string }[]
+    const sent = ollama.requests[0]?.body.messages as { content: string }[]
     expect(sent[0]?.content).toBe('Where does the owner live?')
     expect(sent).toHaveLength(2)
-  })
-
-  it('truncates a model reply longer than the sidebar title limit', async () => {
-    const { model } = fakeModel('a'.repeat(100))
-
-    const title = await generateTitle('hi', model)
-
-    expect(title).toBe(`${'a'.repeat(60)}…`)
-  })
-
-  it('throws when the model returns a blank reply, so callers keep the fallback title', async () => {
-    const { model } = fakeModel('   ')
-
-    await expect(generateTitle('hi', model)).rejects.toThrow()
   })
 })
 

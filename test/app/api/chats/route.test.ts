@@ -1,23 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { startFakeOllama, successChunks, type FakeOllamaServer } from '../../../helpers/fake-ollama'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { createChat } = vi.hoisted(() => ({ createChat: vi.fn() }))
-const { updateTitle } = vi.hoisted(() => ({ updateTitle: vi.fn() }))
-const { after } = vi.hoisted(() => ({ after: vi.fn((callback: () => unknown) => callback()) }))
+const { createChat, getChats } = vi.hoisted(() => ({ createChat: vi.fn(), getChats: vi.fn() }))
 
 vi.mock('@/lib/chat/chats', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/chat/chats')>()),
   createChat,
-  updateTitle
-}))
-vi.mock('next/server', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('next/server')>()),
-  after
+  getChats
 }))
 
-const { POST } = await import('@/app/api/chats/route')
-
-const ORIGINAL_ENV = { ...process.env }
+const { GET, POST } = await import('@/app/api/chats/route')
 
 function postChats(body: unknown) {
   return POST(new Request('http://localhost/api/chats', {
@@ -28,52 +19,28 @@ function postChats(body: unknown) {
 }
 
 describe('POST /api/chats', () => {
-  const MODEL = 'custom-test-model'
-  let ollama: FakeOllamaServer
-
-  beforeEach(async () => {
-    ollama = await startFakeOllama(() => ({ chunks: successChunks('A short title', MODEL) }))
-    process.env.OLLAMA_BASE_URL = ollama.url
-    process.env.OLLAMA_MODEL = MODEL
+  beforeEach(() => {
     createChat.mockReset().mockReturnValue({ id: 'chat-1', title: 'Fallback title' })
-    updateTitle.mockReset()
-    after.mockClear()
   })
 
-  afterEach(async () => {
-    await ollama.close()
-    process.env = { ...ORIGINAL_ENV }
-  })
-
-  it('returns the new chat id from the synchronous, truncated-text title', async () => {
+  it('creates a chat from the given text and returns its id', async () => {
     const response = await postChats({ text: 'Where does the owner live?' })
-    await after.mock.results[0]?.value
 
     expect(response.status).toBe(200)
     expect(await response.json()).toEqual({ id: 'chat-1' })
     expect(createChat).toHaveBeenCalledWith('Where does the owner live?')
   })
+})
 
-  it('schedules an LLM title update via after(), without blocking the response', async () => {
-    await postChats({ text: 'Where does the owner live?' })
-    await after.mock.results[0]?.value
-
-    expect(after).toHaveBeenCalledTimes(1)
-    expect(updateTitle).toHaveBeenCalledWith('chat-1', 'A short title')
+describe('GET /api/chats', () => {
+  beforeEach(() => {
+    getChats.mockReset().mockReturnValue([{ id: 'chat-1', title: 'A chat' }])
   })
 
-  it('leaves the fallback title in place, without throwing, when the model is unreachable', async () => {
-    await ollama.close()
+  it('returns every chat', async () => {
+    const response = await GET()
 
-    await postChats({ text: 'Where does the owner live?' })
-    await after.mock.results[0]?.value
-
-    expect(updateTitle).not.toHaveBeenCalled()
-  })
-
-  it('skips title generation entirely for a blank message', async () => {
-    await postChats({ text: '   ' })
-
-    expect(after).not.toHaveBeenCalled()
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual([{ id: 'chat-1', title: 'A chat' }])
   })
 })

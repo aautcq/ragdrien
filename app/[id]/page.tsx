@@ -1,6 +1,6 @@
 import Chat from "@/components/chat";
 import { getChat } from "@/lib/chat/chats";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -8,10 +8,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   const chat = getChat(id)
 
   if (!chat) {
-    redirect("/")
+    notFound()
   }
 
   return (
-    <Chat id={chat.id} initialMessages={chat.messages} />
+    <Chat id={chat.id} title={chat.title} initialMessages={chat.messages} />
   );
 }

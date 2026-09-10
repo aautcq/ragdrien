@@ -17,7 +17,7 @@ export interface ChatWithMessages extends Chat {
 const TITLE_MAX_LENGTH = 60
 
 /** Collapses whitespace and hard-caps `text` at TITLE_MAX_LENGTH, appending an ellipsis when truncated. */
-function capTitleLength(text: string): string {
+export function capTitleLength(text: string): string {
   const collapsed = text.trim().replace(/\s+/g, ' ')
   return collapsed.length > TITLE_MAX_LENGTH ? `${collapsed.slice(0, TITLE_MAX_LENGTH)}…` : collapsed
 }
@@ -30,10 +30,13 @@ export function isBlankMessage(text: string): boolean {
 /**
  * Derives a Chat's initial sidebar title synchronously from its opening
  * Message: the message text, truncated. Used as the title until (and
- * unless) generateTitle's LLM summary replaces it — see docs/adr/0007
- * -llm-generated-chat-titles.md.
+ * unless) generateTitle's LLM summary replaces it — see docs/adr/0008
+ * -stream-chat-titles-from-the-client.md. Exported so callers (see
+ * components/chat.tsx) can tell whether a Chat's persisted title is still
+ * this fallback (and so still needs generating) by recomputing it from the
+ * opening message and comparing.
  */
-function deriveTitle(text: string): string {
+export function deriveTitle(text: string): string {
   return isBlankMessage(text) ? 'New Chat' : capTitleLength(text)
 }
 
@@ -46,23 +49,34 @@ const TITLE_INSTRUCTION = 'Summarize the visitor\'s message above as a short tit
   + 'words, no punctuation at the end, no quotes. Respond with only the title.'
 
 /**
- * Asks the Model to summarize `text` (a Chat's opening message) into a
- * short title, hard-capped at TITLE_MAX_LENGTH in case the Model ignores
- * the length guidance. Throws if the Model returns a blank reply, so
- * callers (see app/api/chats/route.ts) treat it the same as any other
- * generation failure and keep the existing fallback title rather than
- * overwriting it with an empty one. Callers are expected to skip this
- * entirely for blank input (see isBlankMessage/deriveTitle) — see
- * docs/adr/0007-llm-generated-chat-titles.md.
+ * Streams the Model's summary of `text` (a Chat's opening message) as raw
+ * text chunks, so a caller can forward them to a client as they arrive —
+ * see app/api/chats/[id]/title/route.ts and docs/adr/0008-stream-chat
+ * -titles-from-the-client.md. Neither truncation (TITLE_MAX_LENGTH) nor the
+ * blank-reply guard happen here: they need the *full* assembled text, which
+ * only the caller has once the stream drains, so callers apply
+ * capTitleLength/isBlankMessage themselves before persisting.
  */
-export async function generateTitle(text: string, model: BaseChatModel): Promise<string> {
-  const response = await model.invoke([new HumanMessage(text), new HumanMessage(TITLE_INSTRUCTION)])
-  const content = typeof response.content === 'string' ? response.content : ''
-  const title = capTitleLength(content)
-  if (isBlankMessage(title)) {
-    throw new Error('Model returned a blank title')
-  }
-  return title
+export function generateTitle(text: string, model: BaseChatModel): ReadableStream<Uint8Array<ArrayBuffer>> {
+  const stream = model.streamEvents([new HumanMessage(text), new HumanMessage(TITLE_INSTRUCTION)])
+  const encoder = new TextEncoder();
+
+  const readable = new ReadableStream<Uint8Array<ArrayBuffer>>({
+    async start(controller) {
+      try {
+        for await (const chunk of stream) {
+          if (chunk.event === 'content-block-delta' && chunk.delta.type === 'text-delta') {
+            controller.enqueue(encoder.encode(chunk.delta.text));
+          }
+        }
+
+        controller.close();
+      } catch (error) {
+        controller.error(error);
+      }
+    },
+  });
+  return readable;
 }
 
 
@@ -126,7 +140,7 @@ export function saveMessages(chatId: string, messages: UIMessage[], db: Database
 
 /**
  * Replaces a Chat's persisted title, e.g. once generateTitle's LLM summary
- * is ready — see docs/adr/0007-llm-generated-chat-titles.md. A no-op if
+ * is ready — see docs/adr/0008-stream-chat-titles-from-the-client.md. A no-op if
  * `chatId` doesn't exist (e.g. the Chat was deleted before generation
  * finished).
  */
