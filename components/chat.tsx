@@ -13,7 +13,7 @@ import { ChatMessages } from "@/components/chat-messages";
 import { ChatPromptInput } from "@/components/chat-prompt-input";
 import { ChatError } from "@/components/chat-error";
 import { extractText } from "@/lib/chat/messages";
-import { deriveTitle } from "@/lib/chat/chats";
+import { deriveTitle } from "@/lib/chat/titles";
 import { useSetTitleOverride } from "@/components/title-stream-context";
 
 export default function Chat({ id, title, initialMessages }: { id: string; title: string; initialMessages: UIMessage[] }) {
