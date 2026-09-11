@@ -5,6 +5,7 @@ import type { BaseMessage } from '@langchain/core/messages'
 import type { UIMessage } from 'ai'
 import { saveMessages } from '@/lib/chat/chats'
 import { extractText } from '@/lib/chat/messages'
+import { PERSONA_SYSTEM_PROMPT } from '@/lib/chat/persona'
 import { resolveOllamaConfig } from '@/lib/ollama/config'
 import { createEmbeddings } from '@/lib/rag/embeddings'
 import { getRagStore } from '@/lib/rag/index'
@@ -63,9 +64,15 @@ export async function POST(request: Request) {
       const chunks = await retrieveRelevantChunks(retrievalQuery, { store, embeddings: createEmbeddings() })
       const contextMessage = buildContextMessage(chunks)
 
-      const prompt: BaseMessage[] = contextMessage
-        ? [new SystemMessage(contextMessage), ...conversation]
-        : conversation
+      // Persona/tone system message: always sent, independent of whether
+      // this turn is grounded — see lib/chat/persona.ts. Kept as its own
+      // SystemMessage ahead of the optional RAG context message so each
+      // stays single-purpose.
+      const prompt: BaseMessage[] = [
+        new SystemMessage(PERSONA_SYSTEM_PROMPT),
+        ...(contextMessage ? [new SystemMessage(contextMessage)] : []),
+        ...conversation
+      ]
 
       const id = crypto.randomUUID()
       let fullText = ''

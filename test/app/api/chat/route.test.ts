@@ -73,6 +73,7 @@ describe('POST /api/chat (OLLAMA_MODEL / OLLAMA_BASE_URL set)', () => {
 
     const [request] = ollama.requests.slice(-1)
     expect(request?.body.messages).toEqual([
+      { role: 'system', content: expect.stringContaining('Adrien Autricque') },
       { role: 'user', content: 'first turn' },
       { role: 'assistant', content: 'first reply' },
       { role: 'user', content: 'latest turn' }
@@ -89,7 +90,10 @@ describe('POST /api/chat (OLLAMA_MODEL / OLLAMA_BASE_URL set)', () => {
     await response.text()
 
     const [request] = ollama.requests.slice(-1)
-    expect(request?.body.messages).toEqual([{ role: 'user', content: 'hi' }])
+    expect(request?.body.messages).toEqual([
+      { role: 'system', content: expect.stringContaining('Adrien Autricque') },
+      { role: 'user', content: 'hi' }
+    ])
   })
 
   it('uses OLLAMA_MODEL and OLLAMA_BASE_URL from the environment', async () => {
@@ -186,6 +190,7 @@ describe('POST /api/chat (RAG retrieval)', () => {
     const [request] = ollama.requests.slice(-1)
     const sentMessages = request?.body.messages as { role: string, content: string }[]
     expect(sentMessages).toEqual([
+      { role: 'system', content: expect.stringContaining('Adrien Autricque') },
       { role: 'system', content: expect.stringContaining('The owner lives in Belgium.') },
       { role: 'user', content: 'Where does the owner live?' }
     ])
@@ -250,7 +255,10 @@ describe('POST /api/chat (RAG retrieval)', () => {
     await response.text()
 
     const [request] = ollama.requests.slice(-1)
-    expect(request?.body.messages).toEqual([{ role: 'user', content: 'hi' }])
+    expect(request?.body.messages).toEqual([
+      { role: 'system', content: expect.stringContaining('Adrien Autricque') },
+      { role: 'user', content: 'hi' }
+    ])
   })
 
   it('surfaces a clear error instead of silently falling back when retrieval fails', async () => {
