@@ -11,9 +11,7 @@ import {
   MessageSources,
   MessageTimestamp,
 } from "@/components/ai-elements/message";
-import {
-  formatMessageTime,
-} from "@/lib/chat/timestamps";
+import { formatMessageTime } from "@/lib/chat/timestamps";
 import { CheckIcon, CopyIcon, PencilIcon, RotateCcwIcon } from "lucide-react";
 import { extractText } from "@/lib/chat/messages";
 
