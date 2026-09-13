@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Trash2Icon } from "lucide-react"
 
-export function AlertModal({ render, onClick }: { render: React.ReactElement, onClick: () => void }) {
+export function AlertModal({ render, onClick, loading }: { render: React.ReactElement, onClick: () => void, loading: boolean }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger render={render} />
@@ -28,7 +28,7 @@ export function AlertModal({ render, onClick }: { render: React.ReactElement, on
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel variant="outline">Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onClick}>Delete</AlertDialogAction>
+          <AlertDialogAction variant="destructive" onClick={onClick} disabled={loading}>Delete</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
