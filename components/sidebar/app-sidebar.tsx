@@ -10,11 +10,11 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar"
 import { AppLogo } from "@/components/app-logo"
-import { AppSidebarNavLink } from "@/components/app-sidebar-nav-link"
-import { AppSidebarDeleteChatButton } from "@/components/app-sidebar-delete-chat-button"
-import { AppSidebarChatTitle } from "@/components/app-sidebar-chat-title"
+import { AppSidebarNavLink } from "@/components/sidebar/app-sidebar-nav-link"
+import { AppSidebarDeleteChatButton } from "@/components/sidebar/app-sidebar-delete-chat-button"
+import { AppSidebarChatTitle } from "@/components/sidebar/app-sidebar-chat-title"
 import { getChats } from "@/lib/chat/chats"
-import { SearchChats } from "@/components/search-chats"
+import { SearchChats } from "@/components/sidebar/search-chats"
 import { Plus } from "lucide-react"
 
 export async function AppSidebar() {

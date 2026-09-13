@@ -1,6 +1,6 @@
 "use client"
 
-import { useTitleOverride } from "@/components/title-stream-context"
+import { useTitleOverride } from "@/components/chat/title-stream-context"
 
 /**
  * A Chat's sidebar title, live-updating while its title is streaming in

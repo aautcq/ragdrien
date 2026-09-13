@@ -1,7 +1,7 @@
 import { SidebarProvider } from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarButton } from "@/components/app-sidebar-button"
-import { TitleStreamProvider } from "@/components/title-stream-context"
+import { AppSidebar } from "@/components/sidebar/app-sidebar"
+import { SidebarButton } from "@/components/sidebar/app-sidebar-button"
+import { TitleStreamProvider } from "@/components/chat/title-stream-context"
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (

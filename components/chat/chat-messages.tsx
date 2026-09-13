@@ -8,7 +8,7 @@ import {
   syncMessageTimestamps,
   withRefreshedTimestamp,
 } from "@/lib/chat/timestamps";
-import { ChatMessage } from "@/components/chat-message";
+import { ChatMessage } from "@/components/chat/chat-message";
 import { extractText } from "@/lib/chat/messages";
 import { Dot } from "lucide-react";
 

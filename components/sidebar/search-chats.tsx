@@ -1,6 +1,6 @@
 "use client";
 
-import { ChatsCommandPalette } from "@/components/chats-command-palette";
+import { ChatsCommandPalette } from "@/components/sidebar/chats-command-palette";
 import { CommandDialog } from "@/components/ui/command"
 import { SidebarMenuButton } from "@/components/ui/sidebar"
 import { Search } from "lucide-react"

@@ -1,4 +1,4 @@
-import Chat from "@/components/chat";
+import Chat from "@/components/chat/chat";
 import { getChat } from "@/lib/chat/chats";
 import { notFound } from "next/navigation";
 

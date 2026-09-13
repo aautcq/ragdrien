@@ -9,12 +9,12 @@ import {
   ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
-import { ChatMessages } from "@/components/chat-messages";
-import { ChatPromptInput } from "@/components/chat-prompt-input";
-import { ChatError } from "@/components/chat-error";
+import { ChatMessages } from "@/components/chat/chat-messages";
+import { ChatPromptInput } from "@/components/chat/chat-prompt-input";
+import { ChatError } from "@/components/chat/chat-error";
 import { extractText } from "@/lib/chat/messages";
 import { deriveTitle } from "@/lib/chat/titles";
-import { useSetTitleOverride } from "@/components/title-stream-context";
+import { useSetTitleOverride } from "@/components/chat/title-stream-context";
 
 export default function Chat({ id, title, initialMessages }: { id: string; title: string; initialMessages: UIMessage[] }) {
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -119,7 +119,7 @@ export default function Chat({ id, title, initialMessages }: { id: string; title
           {messages.length === 0 ? (
             <ConversationEmptyState
               title="No messages yet"
-              description="Ask me anything about Adrien..."
+              description="Ask me anything — I'm Adrien."
             />
           ) : (
             <ChatMessages
