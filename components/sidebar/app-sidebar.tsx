@@ -36,23 +36,25 @@ export async function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Your chats</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {chats.map((chat) => (
-                <SidebarMenuItem key={chat.id}>
-                  <AppSidebarNavLink href={`/${chat.id}`}>
-                    <AppSidebarChatTitle id={chat.id} title={chat.title} />
-                  </AppSidebarNavLink>
-                  <AppSidebarDeleteChatButton id={chat.id} />
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+        <SidebarContent>
+        {chats.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Your chats</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {chats.map((chat) => (
+                  <SidebarMenuItem key={chat.id}>
+                    <AppSidebarNavLink href={`/${chat.id}`}>
+                      <AppSidebarChatTitle id={chat.id} title={chat.title} />
+                    </AppSidebarNavLink>
+                    <AppSidebarDeleteChatButton id={chat.id} />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        </SidebarContent>
       <SidebarFooter>
         <AppLogo />
       </SidebarFooter>
