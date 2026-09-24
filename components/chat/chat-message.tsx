@@ -1,4 +1,5 @@
 "use client";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { useState } from "react";
 import type { UIMessage } from "ai";
@@ -30,9 +31,15 @@ export function ChatMessage({ message, timestamp, onStartEdit, canEdit, isLast, 
 
   return (
     <Message from={message.role}>
-      {timestamp === null ? null : (
-        <MessageTimestamp time={formatMessageTime(timestamp)} />
-      )}
+      <div className="flex items-center gap-x-3 group-[.is-user]:justify-end group-[.is-assistant]:justify-start">
+        {message.role === "assistant" && (
+          <Avatar size="sm">
+            <AvatarImage src="avatar.jpg" />
+            <AvatarFallback>AA</AvatarFallback>
+          </Avatar>
+        )}
+        <MessageTimestamp time={timestamp === null ? "..." : formatMessageTime(timestamp)} />
+      </div>
       <MessageContent>
         {message.parts.map((part, index) =>
           part.type === "text" ? (
