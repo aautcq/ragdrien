@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { getChat, updateTitle, generateTitle, capTitleLength, isBlankMessage } from "@/lib/chat/chats";
 import { extractText } from "@/lib/chat/messages";
 import { resolveOllamaConfig } from "@/lib/ollama/config";
+import { getVisitorIdFromRequest } from "@/lib/visitor";
 
 /**
  * Streams an LLM-generated summary of a Chat's opening Message as its new
@@ -14,7 +15,8 @@ import { resolveOllamaConfig } from "@/lib/ollama/config";
  */
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const chat = getChat(id);
+  const visitorId = getVisitorIdFromRequest(request);
+  const chat = getChat(id, visitorId);
   if (!chat) {
     return new Response("Chat not found", { status: 404 });
   }
@@ -58,7 +60,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       // docs/adr/0008-stream-chat-titles-from-the-client.md's "cosmetic,
       // not load-bearing" stance: the existing fallback title stays.
       if (!isBlankMessage(trimmedTitle)) {
-        updateTitle(id, capTitleLength(trimmedTitle));
+        updateTitle(id, visitorId, capTitleLength(trimmedTitle));
       }
     } catch (error) {
       console.warn(`[chats] Failed to generate a title for chat ${id}:`, error);

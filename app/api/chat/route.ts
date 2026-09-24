@@ -10,6 +10,7 @@ import { resolveOllamaConfig } from '@/lib/ollama/config'
 import { createEmbeddings } from '@/lib/rag/embeddings'
 import { getRagStore } from '@/lib/rag/index'
 import { buildContextMessage, buildRetrievalQuery, chunksToSources, retrieveRelevantChunks } from '@/lib/rag/retrieval'
+import { getVisitorIdFromRequest } from '@/lib/visitor'
 
 /**
  * Converts the visitor-visible transcript into the langchain messages sent to
@@ -27,6 +28,7 @@ function toConversation(messages: UIMessage[]): BaseMessage[] {
 
 export async function POST(request: Request) {
   const { id: chatId, messages } = await request.json() as { id?: string, messages: UIMessage[] }
+  const visitorId = getVisitorIdFromRequest(request)
 
   // Conversational turn: the full visitor-visible transcript reaches the
   // model, not just the latest message.
@@ -110,14 +112,15 @@ export async function POST(request: Request) {
       // overwriting the Chat's stored Messages captures the whole thing —
       // see docs/adr/0006-sqlite-for-chat-and-vector-store-persistence.md.
       // Skipped when the request has no chat id (e.g. a request made
-      // outside a persisted Chat).
+      // outside a persisted Chat). saveMessages is itself a no-op if
+      // chatId isn't owned by visitorId — see CONTEXT.md's Visitor term.
       if (chatId) {
         const assistantMessage: UIMessage = {
           id,
           role: 'assistant',
           parts: [{ type: 'text', text: fullText }, ...sourceParts]
         }
-        saveMessages(chatId, [...messages, assistantMessage])
+        saveMessages(chatId, visitorId, [...messages, assistantMessage])
       }
     },
     // Surface a clear error to the client (e.g. Ollama unreachable, model not

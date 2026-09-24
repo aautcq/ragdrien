@@ -2,9 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { DatabaseSync } from 'node:sqlite'
 import { ChatOllama } from '@langchain/ollama'
 import { createDb } from '@/lib/db'
-import { createChat, generateTitle, getChat, getChats, saveMessages, updateTitle } from '@/lib/chat/chats'
+import { createChat, deleteChat, generateTitle, getChat, getChats, saveMessages, updateTitle } from '@/lib/chat/chats'
 import { assistantMessage, userMessage } from '../../helpers/ui-messages'
 import { startFakeOllama, successChunks, type FakeOllamaServer } from '../../helpers/fake-ollama'
+
+const VISITOR = 'visitor-1'
+const OTHER_VISITOR = 'visitor-2'
 
 describe('createChat', () => {
   let db: DatabaseSync
@@ -14,20 +17,20 @@ describe('createChat', () => {
   })
 
   it('persists a new chat with its opening message', () => {
-    const chat = createChat('Where does the owner live?', db)
+    const chat = createChat('Where does the owner live?', VISITOR, db)
 
-    const stored = getChat(chat.id, db)
+    const stored = getChat(chat.id, VISITOR, db)
     expect(stored?.messages).toEqual([userMessage(stored!.messages[0]!.id, 'Where does the owner live?')])
   })
 
   it('derives the title from the opening message, truncating long text', () => {
-    const chat = createChat('a'.repeat(100), db)
+    const chat = createChat('a'.repeat(100), VISITOR, db)
 
     expect(chat.title).toBe(`${'a'.repeat(60)}…`)
   })
 
   it('falls back to "New Chat" for a blank opening message', () => {
-    const chat = createChat('   ', db)
+    const chat = createChat('   ', VISITOR, db)
 
     expect(chat.title).toBe('New Chat')
   })
@@ -40,18 +43,24 @@ describe('getChats', () => {
     db = createDb(':memory:')
   })
 
-  it('returns every chat, most recently created first', () => {
-    const first = createChat('first chat', db)
-    const second = createChat('second chat', db)
+  it('returns every chat for the given visitor, most recently created first', () => {
+    const first = createChat('first chat', VISITOR, db)
+    const second = createChat('second chat', VISITOR, db)
 
-    expect(getChats(db)).toEqual([
+    expect(getChats(VISITOR, db)).toEqual([
       { id: second.id, title: second.title },
       { id: first.id, title: first.title }
     ])
   })
 
   it('returns an empty array when no chats exist', () => {
-    expect(getChats(db)).toEqual([])
+    expect(getChats(VISITOR, db)).toEqual([])
+  })
+
+  it('never returns another visitor\'s chats', () => {
+    createChat('someone else\'s chat', OTHER_VISITOR, db)
+
+    expect(getChats(VISITOR, db)).toEqual([])
   })
 })
 
@@ -63,18 +72,24 @@ describe('getChat', () => {
   })
 
   it('returns undefined for an unknown id', () => {
-    expect(getChat('missing', db)).toBeUndefined()
+    expect(getChat('missing', VISITOR, db)).toBeUndefined()
   })
 
   it('returns the chat with its messages in order', () => {
-    const chat = createChat('hi', db)
-    const opening = getChat(chat.id, db)!.messages[0]!
-    saveMessages(chat.id, [opening, assistantMessage('a1', 'hello!')], db)
+    const chat = createChat('hi', VISITOR, db)
+    const opening = getChat(chat.id, VISITOR, db)!.messages[0]!
+    saveMessages(chat.id, VISITOR, [opening, assistantMessage('a1', 'hello!')], db)
 
-    const stored = getChat(chat.id, db)
+    const stored = getChat(chat.id, VISITOR, db)
 
     expect(stored?.id).toBe(chat.id)
     expect(stored?.messages).toEqual([opening, assistantMessage('a1', 'hello!')])
+  })
+
+  it('returns undefined for a chat owned by a different visitor', () => {
+    const chat = createChat('someone else\'s chat', OTHER_VISITOR, db)
+
+    expect(getChat(chat.id, VISITOR, db)).toBeUndefined()
   })
 })
 
@@ -86,17 +101,26 @@ describe('saveMessages', () => {
   })
 
   it('replaces the entire persisted transcript', () => {
-    const chat = createChat('hi', db)
+    const chat = createChat('hi', VISITOR, db)
 
-    saveMessages(chat.id, [userMessage('u1', 'hi'), assistantMessage('a1', 'hello!')], db)
-    expect(getChat(chat.id, db)?.messages).toEqual([userMessage('u1', 'hi'), assistantMessage('a1', 'hello!')])
+    saveMessages(chat.id, VISITOR, [userMessage('u1', 'hi'), assistantMessage('a1', 'hello!')], db)
+    expect(getChat(chat.id, VISITOR, db)?.messages).toEqual([userMessage('u1', 'hi'), assistantMessage('a1', 'hello!')])
 
-    saveMessages(chat.id, [userMessage('u1', 'hi'), assistantMessage('a1', 'hello!'), userMessage('u2', 'and you?')], db)
-    expect(getChat(chat.id, db)?.messages).toEqual([
+    saveMessages(chat.id, VISITOR, [userMessage('u1', 'hi'), assistantMessage('a1', 'hello!'), userMessage('u2', 'and you?')], db)
+    expect(getChat(chat.id, VISITOR, db)?.messages).toEqual([
       userMessage('u1', 'hi'),
       assistantMessage('a1', 'hello!'),
       userMessage('u2', 'and you?')
     ])
+  })
+
+  it('does not touch another visitor\'s chat', () => {
+    const chat = createChat('hi', OTHER_VISITOR, db)
+    const originalMessages = getChat(chat.id, OTHER_VISITOR, db)!.messages
+
+    saveMessages(chat.id, VISITOR, [userMessage('u1', 'hijacked'), assistantMessage('a1', 'hijacked')], db)
+
+    expect(getChat(chat.id, OTHER_VISITOR, db)?.messages).toEqual(originalMessages)
   })
 })
 
@@ -151,10 +175,44 @@ describe('updateTitle', () => {
   })
 
   it('replaces the persisted title for the given chat', () => {
-    const chat = createChat('hi', db)
+    const chat = createChat('hi', VISITOR, db)
 
-    updateTitle(chat.id, 'A better title', db)
+    updateTitle(chat.id, VISITOR, 'A better title', db)
 
-    expect(getChats(db)).toEqual([{ id: chat.id, title: 'A better title' }])
+    expect(getChats(VISITOR, db)).toEqual([{ id: chat.id, title: 'A better title' }])
+  })
+
+  it('does not touch another visitor\'s chat title', () => {
+    const chat = createChat('hi', OTHER_VISITOR, db)
+
+    updateTitle(chat.id, VISITOR, 'hijacked title', db)
+
+    expect(getChats(OTHER_VISITOR, db)).toEqual([{ id: chat.id, title: chat.title }])
+  })
+})
+
+describe('deleteChat', () => {
+  let db: DatabaseSync
+
+  beforeEach(() => {
+    db = createDb(':memory:')
+  })
+
+  it('deletes the chat and its messages, returning true', () => {
+    const chat = createChat('hi', VISITOR, db)
+
+    expect(deleteChat(chat.id, VISITOR, db)).toBe(true)
+    expect(getChat(chat.id, VISITOR, db)).toBeUndefined()
+  })
+
+  it('returns false and leaves another visitor\'s chat untouched', () => {
+    const chat = createChat('hi', OTHER_VISITOR, db)
+
+    expect(deleteChat(chat.id, VISITOR, db)).toBe(false)
+    expect(getChat(chat.id, OTHER_VISITOR, db)).toBeDefined()
+  })
+
+  it('returns false for an unknown id', () => {
+    expect(deleteChat('missing', VISITOR, db)).toBe(false)
   })
 })

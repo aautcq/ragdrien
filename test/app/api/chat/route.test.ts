@@ -41,7 +41,7 @@ beforeEach(() => {
 function postChat(body: unknown) {
   return POST(new Request('http://localhost/api/chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', Cookie: 'visitor_id=visitor-1' },
     body: JSON.stringify(body)
   }))
 }
@@ -390,7 +390,7 @@ describe('POST /api/chat (persistence)', () => {
     process.env = { ...ORIGINAL_ENV }
   })
 
-  it('persists the full conversation plus the new assistant reply, keyed by the request\'s chat id', async () => {
+  it('persists the full conversation plus the new assistant reply, keyed by the request\'s chat id and the requesting visitor', async () => {
     const response = await postChat({
       id: 'chat-1',
       messages: [userMessage('1', 'hi')]
@@ -398,8 +398,9 @@ describe('POST /api/chat (persistence)', () => {
     await response.text()
 
     expect(saveMessages).toHaveBeenCalledTimes(1)
-    const [chatId, messages] = saveMessages.mock.calls[0]!
+    const [chatId, visitorId, messages] = saveMessages.mock.calls[0]!
     expect(chatId).toBe('chat-1')
+    expect(visitorId).toBe('visitor-1')
     expect(messages).toEqual([
       userMessage('1', 'hi'),
       expect.objectContaining({

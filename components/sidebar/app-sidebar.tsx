@@ -14,11 +14,13 @@ import { AppSidebarNavLink } from "@/components/sidebar/app-sidebar-nav-link"
 import { AppSidebarDeleteChatButton } from "@/components/sidebar/app-sidebar-delete-chat-button"
 import { AppSidebarChatTitle } from "@/components/sidebar/app-sidebar-chat-title"
 import { getChats } from "@/lib/chat/chats"
+import { getVisitorId } from "@/lib/visitor-rsc"
 import { SearchChats } from "@/components/sidebar/search-chats"
 import { Plus } from "lucide-react"
 
 export async function AppSidebar() {
-  const chats = getChats()
+  const visitorId = await getVisitorId()
+  const chats = getChats(visitorId)
 
   return (
     <Sidebar variant="floating">

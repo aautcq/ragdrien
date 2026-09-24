@@ -9,10 +9,16 @@ const DEFAULT_DB_PATH = join(process.cwd(), 'data/app.db')
  * Vector store/Ingestion terms. `CREATE TABLE IF NOT EXISTS` keeps this
  * idempotent across repeated calls (e.g. every getDb() in a long-running
  * process, or every test opening a fresh :memory: database).
+ *
+ * chats.visitor_id scopes every Chat to the anonymous Visitor that created
+ * it (see CONTEXT.md's Visitor term and lib/visitor.ts) — there's no
+ * migration for pre-existing rows without one; `data/app.db` is deleted
+ * as part of shipping this, see docs/adr/0009-anonymous-visitor-scoping-for-chats.md.
  */
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS chats (
   id TEXT PRIMARY KEY,
+  visitor_id TEXT NOT NULL,
   title TEXT NOT NULL,
   created_at INTEGER NOT NULL
 );

@@ -22,7 +22,7 @@ const { PATCH } = await import('@/app/api/chats/[id]/title/route')
 const ORIGINAL_ENV = { ...process.env }
 
 function patchTitle(id: string) {
-  return PATCH(new Request(`http://localhost/api/chats/${id}/title`, { method: 'PATCH' }), { params: Promise.resolve({ id }) })
+  return PATCH(new Request(`http://localhost/api/chats/${id}/title`, { method: 'PATCH', headers: { Cookie: 'visitor_id=visitor-1' } }), { params: Promise.resolve({ id }) })
 }
 
 async function readAll(response: Response): Promise<string> {
@@ -108,7 +108,7 @@ describe('PATCH /api/chats/[id]/title', () => {
     await after.mock.results[0]?.value
 
     expect(after).toHaveBeenCalledTimes(1)
-    expect(updateTitle).toHaveBeenCalledWith('chat-1', 'Owner\'s hometown')
+    expect(updateTitle).toHaveBeenCalledWith('chat-1', 'visitor-1', 'Owner\'s hometown')
   })
 
   it('caps an overly long generated title before persisting', async () => {
@@ -118,7 +118,7 @@ describe('PATCH /api/chats/[id]/title', () => {
     await readAll(response)
     await after.mock.results[0]?.value
 
-    expect(updateTitle).toHaveBeenCalledWith('chat-1', `${'a'.repeat(60)}…`)
+    expect(updateTitle).toHaveBeenCalledWith('chat-1', 'visitor-1', `${'a'.repeat(60)}…`)
   })
 
   it('leaves the fallback title in place, without throwing, when the model returns a blank reply', async () => {

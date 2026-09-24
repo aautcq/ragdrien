@@ -45,8 +45,12 @@ A Document that contributed at least one Chunk to a turn's grounding context, sh
 _Avoid_: Citation, Reference
 
 **Chat**:
-A persisted conversation between a visitor and the assistant: an ordered sequence of Turns, identified by an id and shown in the sidebar by its title. Survives across page loads and server restarts.
+A persisted conversation between a Visitor and the assistant: an ordered sequence of Turns, identified by an id, owned by exactly one Visitor, and shown in that Visitor's sidebar by its title. Survives across page loads and server restarts, but not across browsers or devices — see Visitor.
 _Avoid_: Conversation, session
+
+**Visitor**:
+Whoever's browser is making requests, identified only by an opaque id in a long-lived cookie — no login, no name, no way to recover it if the cookie is lost. Every Chat is owned by exactly one Visitor, and a Visitor never sees another Visitor's Chats.
+_Avoid_: User, account, session
 
 **Message**:
 One persisted entry in a Chat's transcript — either side of a Turn (the visitor's message or the assistant's reply) — stored with its full content, including any Source parts streamed with it.
