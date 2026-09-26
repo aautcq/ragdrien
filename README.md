@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RAGdrien
 
-## Getting Started
+A personal chatbot: visitors converse with a locally-running LLM about the
+site owner, with replies grounded in the owner's own documents (RAG) whenever
+retrieval finds relevant content. This is the Next.js/React/shadcn sibling of
+the original Nuxt/Vue implementation, kept feature-identical.
 
-First, run the development server:
+See [`CONTEXT.md`](./CONTEXT.md) for the domain glossary (Turn, Chunk,
+Vector store, Visitor, etc.) and [`docs/adr/`](./docs/adr/) for the design
+decisions behind the RAG pipeline, persistence, and chat behavior.
+
+## Prerequisites
+
+- Node.js and [pnpm](https://pnpm.io)
+- [Ollama](https://ollama.com) running locally, with the chat and embedding
+  models pulled:
+
+  ```bash
+  ollama pull mistral
+  ollama pull nomic-embed-text
+  ```
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+cp .env.example .env
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the result.
+`.env` configures the Ollama base URL/models and the retrieval tuning
+(`RAG_RETRIEVAL_K`, `RAG_RELEVANCE_THRESHOLD`) — see `.env.example` for
+details.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Adding documents (Ingestion)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Documents live as Markdown/PDF files under `lib/rag/documents/`. Either add
+one by hand, or fetch and clean a web page into Markdown:
 
-## Learn More
+```bash
+pnpm fetch-document <url> <filename.md>
+```
 
-To learn more about Next.js, take a look at the following resources:
+Then rebuild the Vector store from whatever's currently under
+`lib/rag/documents/`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm ingest-documents
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Ingestion is never run automatically — restart the dev/prod server
+afterwards to pick up the new store.
 
-## Deploy on Vercel
+## Testing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm test
+```
